@@ -48,6 +48,7 @@ def validate_settings():
             globals.config.cmd_on_started = globals.config.parser_object.get("pyinstalive", "cmd_on_started")
             globals.config.cmd_on_ended = globals.config.parser_object.get("pyinstalive", "cmd_on_ended")
             globals.config.ffmpeg_path = globals.config.parser_object.get("pyinstalive", "ffmpeg_path")
+            globals.config.cookie_file = globals.config.parser_object.get("pyinstalive", "cookie_file") if globals.config.parser_object.has_option("pyinstalive", "cookie_file") else None
 
             if globals.args.download_path:
                 globals.config.download_path = globals.args.download_path
@@ -132,6 +133,8 @@ def run():
     parser.add_argument('-gc', '--generate-comments', dest='generate_comments_path', metavar='', type=str, required=False, help="Generate a comments log file. Requires a livestream JSON file.")
     parser.add_argument('-gv', '--generate-video', dest='generate_video_path', metavar='', type=str, required=False, help="Assemble downloaded livestream segments into a video file. Requires a livestream segments folder.")
     parser.add_argument('-na', '--no-assemble', dest='no_assemble', action='store_true', help="Do not assemble the downloaded livestream segments into a video file. Overrides the configuration file setting.")
+    parser.add_argument('-c', '--cookies', dest='cookies', metavar='', type=str, required=False, help="Path to Netscape cookie file for login.")
+    parser.add_argument('-ec', '--export-cookies', dest='export_cookies', metavar='', type=str, required=False, help="Export current session cookies to a Netscape cookie file.")
 
     globals.args, unknown_args = parser.parse_known_args()
     validate_success = validate_settings()
@@ -154,21 +157,26 @@ def run():
             globals.session = Session(username=globals.config.username, password=globals.config.password)
             login_success = False
 
-            if not globals.args.username and not globals.args.password:
-                login_success = globals.session.authenticate()
-            elif not globals.args.username or not globals.args.password:
-                logger.warn("Missing --username or --password argument.")
-                logger.warn("Falling back to the configuration file values.")
+            cookie_file = globals.args.cookies or globals.config.cookie_file
+
+            if cookie_file:
+                logger.binfo("Using cookie file for login: {:s}".format(cookie_file))
                 logger.separator()
-                login_success = globals.session.authenticate()
+                login_success = globals.session.authenticate(cookie_file=cookie_file)
             elif globals.args.username and globals.args.password:
                 login_success = globals.session.authenticate(username=globals.args.username, password=globals.args.password)
+            else:
+                login_success = globals.session.authenticate()
 
             if login_success:
                 globals.download.start()
                 helpers.lock_remove()
         else:
-            if globals.args.generate_video_path:
+            if globals.args.export_cookies:
+                globals.session = Session(username=globals.config.username, password=globals.config.password)
+                if globals.session.authenticate():
+                    globals.session.export_cookies(globals.args.export_cookies)
+            elif globals.args.generate_video_path:
                 assembler.assemble()
             elif globals.args.generate_comments_path:
                 Comments().generate_log()

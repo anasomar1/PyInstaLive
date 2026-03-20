@@ -2,7 +2,7 @@ from setuptools import setup
 
 __author__ = 'dvingerh'
 __email__ = 'dirk.ving@gmail.com'
-__version__ = '4.0.2'
+__version__ = '4.1.0'
 
 
 long_description = 'This Python script enables you to download ongoing Instagram livestreams as a video file.'
@@ -21,7 +21,9 @@ setup(
     },
     install_requires=[
         'argparse',
-        'configparser'
+        'configparser',
+        'requests',
+        'brotli'
     ],
     include_package_data=True,
     platforms='any',

@@ -15,3 +15,4 @@ class Config:
     use_locks = True
     send_heartbeat = True
     proxy = None
+    cookie_file = None
