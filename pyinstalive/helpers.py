@@ -80,17 +80,25 @@ def string_escape(s, encoding='utf-8'):
              .decode(encoding))
 
 def get_shared_data(data):
+    if not data:
+        return None
+
     match = re.search(r"window._sharedData = ({[^\n]*});", data)
-    match_str = None
     if match:
-        match_str = match.group(1)
-        return json.loads(match_str).get("config")
-    else:
-        csrf_token = re.search(r'"csrf_token":\s*"([^"]+)"', data)
-        if csrf_token:
-            csrf_token_value = csrf_token.group(1)
-            response = {"csrf_token": csrf_token_value}
-            return response
+        try:
+            return json.loads(match.group(1)).get("config")
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
+    username_match = re.search(r'"username"\s*:\s*"([^"]+)"', data)
+    if username_match:
+        return {"entry_data": {"Login": {"user": {"username": username_match.group(1)}}}}
+
+    csrf_token = re.search(r'"csrf_token":\s*"([^"]+)"', data)
+    if csrf_token:
+        return {"csrf_token": csrf_token.group(1)}
+
+    return None
 
 def lock_exists():
     return os.path.isfile(os.path.join(globals.config.download_path, globals.download.download_user + '.lock'))
