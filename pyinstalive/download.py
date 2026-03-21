@@ -38,8 +38,18 @@ class Download:
                 helpers.lock_create(lock_type="user")
                 logger.info('Getting livestream information for user: {:s}'.format(self.download_user))
                 user_info = api.get_user_info().get("data", {}).get("user", None)
+
                 if user_info:
                     self.download_user_id = user_info.get("id", None)
+                else:
+                    reels_tray = api.get_reels_tray()
+                    for broadcast in reels_tray.get("broadcasts", []):
+                        owner = broadcast.get("broadcast_owner", {})
+                        if owner.get("username") == self.download_user:
+                            self.download_user_id = broadcast.get("id", "").split("_")[0] if broadcast.get("id") else owner.get("pk")
+                            logger.info("Found user in live broadcasts.")
+                            break
+
                 if not self.download_user_id:
                     logger.separator()
                     logger.warn("The specified user does not exist.")

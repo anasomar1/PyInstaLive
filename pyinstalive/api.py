@@ -26,6 +26,8 @@ def get_login_state():
 
 def get_user_info():
     response = globals.session.session.get(Constants.USER_INFO.format(globals.download.download_user), timeout=5)
+    if response.status_code == 429:
+        raise Exception("RATE_LIMITED")
     return json.loads(response.text) if response.status_code == 200 else {}
 
 def get_reels_tray():
