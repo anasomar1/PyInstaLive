@@ -37,8 +37,16 @@ class Download:
             if not helpers.lock_exists():
                 helpers.lock_create(lock_type="user")
                 logger.info('Getting livestream information for user: {:s}'.format(self.download_user))
-                user_info = api.get_user_info().get("data", {}).get("user", None)
+                try:
+                    user_info = api.get_user_info().get("data", {}).get("user", None)
+                except Exception as e:
+                    if "RATE_LIMITED" in str(e):
+                        logger.warn("Rate limited on user info, trying reels tray fallback...")
+                        user_info = None
+                    else:
+                        raise
 
+                self.reels_tray_broadcast = None
                 if user_info:
                     self.download_user_id = user_info.get("id", None)
                 else:
@@ -47,6 +55,7 @@ class Download:
                         owner = broadcast.get("broadcast_owner", {})
                         if owner.get("username") == self.download_user:
                             self.download_user_id = broadcast.get("id", "").split("_")[0] if broadcast.get("id") else owner.get("pk")
+                            self.reels_tray_broadcast = broadcast
                             logger.info("Found user in live broadcasts.")
                             break
 
@@ -56,6 +65,9 @@ class Download:
                     logger.separator()
                     return
                 self.livestream_object_init = self.get_single_livestream()
+                if not self.livestream_object_init and self.reels_tray_broadcast:
+                    logger.warn("Using reels tray data as fallback...")
+                    self.livestream_object_init = self.reels_tray_broadcast
                 logger.separator()
                 if self.livestream_object_init:
                     logger.binfo("Livestream available, starting download.")
@@ -274,10 +286,17 @@ class Download:
     def update_stream_data(self, from_thread=False):
         if not self.download_stop:
             if not self.livestream_object:
-                self.livestream_object = api.get_stream_data()
+                try:
+                    self.livestream_object = api.get_stream_data()
+                except Exception:
+                    logger.warn("Could not get stream data, using initial broadcast info.")
+                    self.livestream_object = self.livestream_object_init.copy() if self.livestream_object_init else {}
+                if not self.livestream_object.get("id") and self.livestream_object_init:
+                    self.livestream_object["id"] = self.livestream_object_init.get("id")
                 if not self.livestream_object.get("initial_buffered_duration", None):
                     self.livestream_object['initial_buffered_duration'] = self.downloader_object.initial_buffered_duration
-                self.livestream_object["delay"] = int(globals.download.timestamp) - int(self.livestream_object.get("published_time"))
+                published_time = self.livestream_object.get("published_time")
+                self.livestream_object["delay"] = int(globals.download.timestamp) - int(published_time) if published_time else 0
 
             last_stream_status = self.livestream_object.get("broadcast_status")
             stream_heartbeat = api.do_heartbeat() if globals.config.send_heartbeat else api.get_stream_data()
@@ -301,5 +320,5 @@ class Download:
                     logger.separator()
                 logger.info('Airing time  : {}'.format(helpers.get_stream_duration("airtime")))
                 logger.info('Status       : {}'.format(self.livestream_object.get("broadcast_status", "?").capitalize()))
-                logger.info('Viewers      : {}'.format( int(self.livestream_object.get("viewer_count", "?"))))
+                logger.info('Viewers      : {}'.format(int(self.livestream_object.get("viewer_count", 0) or 0)))
             return self.livestream_object.get('broadcast_status') not in ['active', 'interrupted']

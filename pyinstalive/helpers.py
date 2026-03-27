@@ -138,7 +138,10 @@ def get_stream_duration(duration_type="airtime"):
         livestream_object = globals.download.livestream_object
         buffer = int(globals.download.downloader_object.initial_buffered_duration)
         if duration_type == "airtime":
-            stream_started_mins, stream_started_secs = divmod((int(time.time()) - int(livestream_object.get("published_time"))), 60)
+            published_time = livestream_object.get("published_time")
+            if published_time is None:
+                return "?"
+            stream_started_mins, stream_started_secs = divmod((int(time.time()) - int(published_time)), 60)
 
         elif duration_type == "download":
             stream_started_mins, stream_started_secs = divmod((int(time.time()) - int(globals.download.timestamp)), 60)

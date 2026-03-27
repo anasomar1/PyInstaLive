@@ -57,7 +57,13 @@ def assemble(retry_with_zero_m4v=False):
                     livestream_info['broadcast_status'] = "active"
                     livestream_info['segments'] = {}
 
-        stream_id = str(livestream_info['id'])
+        stream_id = str(livestream_info.get('id', ''))
+        if not stream_id:
+            json_basename = os.path.splitext(os.path.basename(globals.download.data_json_path))[0]
+            for part in json_basename.split('_'):
+                if part.isdigit() and len(part) > 10:
+                    stream_id = part
+                    break
 
         segment_meta = livestream_info.get('segments', {})
         if segment_meta:
