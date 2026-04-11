@@ -2,7 +2,7 @@ from setuptools import setup
 
 __author__ = 'dvingerh'
 __email__ = 'dirk.ving@gmail.com'
-__version__ = '4.1.2'
+__version__ = '4.1.3'
 
 
 long_description = 'This Python script enables you to download ongoing Instagram livestreams as a video file.'
