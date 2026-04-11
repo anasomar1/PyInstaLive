@@ -1,4 +1,5 @@
 import time
+import random
 import os
 import json
 import re
@@ -197,7 +198,7 @@ def handle_tasks_worker():
         if globals.download.download_stop:
             break
         else:
-            time.sleep(3)
+            time.sleep(random.uniform(2.5, 5.0))
 
 def clean_download_dir():
     dir_delcount = 0
